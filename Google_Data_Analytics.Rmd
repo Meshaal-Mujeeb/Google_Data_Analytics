@@ -1,0 +1,316 @@
+---
+title: "Google_Data_Analytics"
+author: "Meshaal Mujeeb"
+output: github_document
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Processing in excel
+All the excel files were inserted in an excel workbook for initial processing. Further 
+
+1. Duplicates were removed from the datasets (if any existed)
+
+2. Made sure proper naming convention is used in the dataset. 
+
+3. Two new columns were added for the analysis process
+
+   *	ride_length – Length of the ride.
+      To calculate this variable, the started_at column was subtracted from the ended_at column.
+
+   *  day_of_ride – The weekday on which the ride started
+      This values for this column were found using the =WEEKDAY() function. The date for which the day had to be        found was taken as values of started_at column.
+      Sunday = 1 to Saturday = 7
+
+4. Made sure the data type assigned to each column is appropriate. This helps in calculation and                     removing error while importing the datasets
+
+   *	The started_at and ended_at columns were converted into the datetime type (format = mm/dd/yyyy                    hh:mm:ss)
+
+   *	The ride_length column was converted to date type (format = hh:mm:ss) 
+
+#### Sheet vise inspection
+
+1. In sheet 202101-divvy-tripdata, two values in the ride_length column was found to have “#####” value.    This     was a calculated column. The error was in the started_at and ended_at column. The values in two    rows were      interchanged. It was corrected and the correct ride_length values were found.
+
+2. In sheet 202103-divvy-tripdata, the same error was found in two rows. It was corrected and the          correct    ride_length values were found.
+
+3. In sheet 202104-divvy-tripdata, the same error was found in five rows. It was corrected and the         correct    ride_length values were found.
+
+4. In sheet 202105-divvy-tripdata, the same error was found in two rows. It was corrected and the          correct    ride_length values were found.
+
+5. In sheet 202106-divvy-tripdata, the same error was found in five rows. It was corrected and the         correct    ride_length values were found.
+
+6. In sheet 202106-divvy-tripdata, the same error was found in thirteen rows. It was corrected and the     correct    ride_length values were found.
+
+### Installing and loading the required packages
+
+```{r Installing and loading the packages}
+
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+library(skimr)
+```
+
+### Importing the datasets
+
+All the datasets are imported into R. The columns started_at and ended_at are formatted as datetime.
+
+```{r Importing the datasets}
+cyclistic_data_JAN <- read_csv("~/Cyclistic_data1/Cyclistic_data_2021/202101-divvy-tripdata.csv",
+                               col_types = cols(started_at = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
+                                                ended_at = col_datetime(format = "%m/%d/%Y %H:%M:%S")))
+cyclistic_data_FEB <- read_csv("~/Cyclistic_data1/Cyclistic_data_2021/202102-divvy-tripdata.csv",
+                               col_types = cols(started_at = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
+                                                ended_at = col_datetime(format = "%m/%d/%Y %H:%M:%S")))
+cyclistic_data_MAR <- read_csv("~/Cyclistic_data1/Cyclistic_data_2021/202103-divvy-tripdata.csv",
+                               col_types = cols(started_at = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
+                                                ended_at = col_datetime(format = "%m/%d/%Y %H:%M:%S")))
+cyclistic_data_APR <- read_csv("~/Cyclistic_data1/Cyclistic_data_2021/202104-divvy-tripdata.csv",
+                               col_types = cols(started_at = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
+                                                ended_at = col_datetime(format = "%m/%d/%Y %H:%M:%S")))
+cyclistic_data_MAY <- read_csv("~/Cyclistic_data1/Cyclistic_data_2021/202105-divvy-tripdata.csv",
+                               col_types = cols(started_at = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
+                                                ended_at = col_datetime(format = "%m/%d/%Y %H:%M:%S")))
+cyclistic_data_JUN <- read_csv("~/Cyclistic_data1/Cyclistic_data_2021/202106-divvy-tripdata.csv",
+                               col_types = cols(started_at = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
+                                                ended_at = col_datetime(format = "%m/%d/%Y %H:%M:%S")))
+cyclistic_data_JUL <- read_csv("~/Cyclistic_data1/Cyclistic_data_2021/202107-divvy-tripdata.csv",
+                               col_types = cols(started_at = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
+                                                ended_at = col_datetime(format = "%m/%d/%Y %H:%M:%S")))
+```
+
+### Binding the datasets together
+All the datasets are binded together to form an all trips dataset
+
+```{r Binding the datasets together, echo=TRUE}
+all_trips_data <- bind_rows(cyclistic_data_JAN,cyclistic_data_FEB,cyclistic_data_MAR, 
+                            cyclistic_data_APR,cyclistic_data_MAY,cyclistic_data_JUN,cyclistic_data_JUL)
+tibble(all_trips_data)
+```
+
+### Data Processing
+
+First step was to Convert the ride_length column from character to timespan. Further a new column was created showing the calculated ride duration in seconds. This column was made for easier calculations. Another column with the month of ride filtered out was created for the same purpose. These number were formatted as month names and the existing Day_of_ride column was formatted as names of the days of the week. 
+
+#### Converting the ride_length column from character to timespan
+
+```{r}
+work_sheet1 <- all_trips_data %>% mutate(ride_length = hms(ride_length))
+```
+
+#### Creating a column for the month the ride started
+
+```{r Convertion to Timespan}
+work_sheet1$ride_month <- as.numeric(format(work_sheet1$started_at, '%m'))
+```
+
+#### Creating a column for the time duration of ride in seconds
+
+```{r Time duration}
+work_sheet1 <- mutate(work_sheet1, time_duration = difftime(work_sheet1$ended_at,work_sheet1$started_at, units = "secs"))
+work_sheet1$time_duration <- as.numeric(as.character(work_sheet1$time_duration))
+```
+
+
+```{r head, echo=FALSE}
+head(work_sheet1)
+```
+
+#### Converting the day_of_ride column to character
+
+```{r}
+work_sheet1$day_of_ride <- as.character(work_sheet1$day_of_ride)
+work_sheet1$day_of_ride[work_sheet1$day_of_ride == "1"] <- "Sunday"
+work_sheet1$day_of_ride[work_sheet1$day_of_ride == "2"] <- "Monday"
+work_sheet1$day_of_ride[work_sheet1$day_of_ride == "3"] <- "Tuesday"
+work_sheet1$day_of_ride[work_sheet1$day_of_ride == "4"] <- "Wednesday"
+work_sheet1$day_of_ride[work_sheet1$day_of_ride == "5"] <- "Thursday"
+work_sheet1$day_of_ride[work_sheet1$day_of_ride == "6"] <- "Friday"
+work_sheet1$day_of_ride[work_sheet1$day_of_ride == "7"] <- "Saturday"
+work_sheet1$day_of_ride <- ordered(work_sheet1$day_of_ride, 
+                                   levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+```
+
+
+#### Naming the values in the ride_month column
+
+```{r Naming and ordering Months}
+work_sheet1$ride_month[work_sheet1$ride_month == "1"] <- "January"
+work_sheet1$ride_month[work_sheet1$ride_month == "2"] <- "February"
+work_sheet1$ride_month[work_sheet1$ride_month == "3"] <- "March"
+work_sheet1$ride_month[work_sheet1$ride_month == "4"] <- "April"
+work_sheet1$ride_month[work_sheet1$ride_month == "5"] <- "May"
+work_sheet1$ride_month[work_sheet1$ride_month == "6"] <- "June"
+work_sheet1$ride_month[work_sheet1$ride_month == "7"] <- "July"
+work_sheet1$ride_month <- ordered(work_sheet1$ride_month, 
+                                   levels=c("January", "February", "March", "April", "May", "June", "July"))
+```
+
+## Descriptive Analysis
+
+Summary of the time duration rides completed by members and casual riders
+
+```{r Summary of Ride duration}
+summary(work_sheet1$ride_length)
+summary(work_sheet1$time_duration)
+d_member <- work_sheet1 %>% filter(member_casual == "member") 
+summary(d_member$ride_length)
+quantile(d_member$ride_length)
+d_casual <- work_sheet1 %>%  filter(member_casual == "casual")
+summary(d_casual$ride_length)
+quantile(d_casual$ride_length)
+```
+### Finding the stations with highest footfall
+```{r}
+head(count(work_sheet1, start_station_name, member_casual, sort = TRUE))
+head(count(work_sheet1, end_station_name, member_casual, sort = TRUE))
+head(count(filter(work_sheet1, member_casual == "casual"), start_station_name, member_casual, sort = TRUE))
+head(count(filter(work_sheet1, member_casual == "casual"), end_station_name, member_casual, sort = TRUE))
+head(count(filter(work_sheet1, member_casual == "member"), start_station_name, member_casual, sort = TRUE))
+head(count(filter(work_sheet1, member_casual == "member"), end_station_name, member_casual, sort = TRUE))
+```
+
+### Studying the missing stations and stations ids
+```{r}
+tibble(count(filter(work_sheet1, is.na(start_station_name)), start_station_name, rideable_type, sort = TRUE))
+tibble(count(filter(work_sheet1, is.na(end_station_name)), end_station_name, rideable_type, sort = TRUE))
+```
+
+### Number of rides that lasted below a minute
+```{r}
+length(which(work_sheet1$time_duration < 60))
+work_sheet1 %>% filter(time_duration < 60) %>%  group_by(member_casual) %>% summarise(n = n()) %>% 
+  mutate(Percetage = 100*(n/sum(n)))
+```
+
+### Number of rides that lasted above a day
+```{r}
+length(which(work_sheet1$time_duration > 86400))
+work_sheet1 %>% filter(time_duration > 86400) %>%  group_by(member_casual) %>% summarise(n = n()) %>% 
+  mutate(Percetage = 100*(n/sum(n)))
+```
+
+### Number of rides per membership (casual and member)
+```{r}
+work_sheet1 %>% group_by(member_casual) %>% summarise(n = n()) %>% 
+  mutate(percentage = 100 * (n/sum(n)))
+```
+
+### Number of rides by types of bikes
+```{r}
+work_sheet1 %>% group_by(rideable_type) %>% summarise(n = n()) %>% 
+  mutate(Percetage = 100*(n/sum(n)))
+```
+
+### Number of rides made by member and casual users by types of bike
+```{r}
+work_sheet1 %>% filter(member_casual == "member") %>% group_by(rideable_type) %>% summarise(n = n()) %>%
+  mutate(Percentage = 100 *(n/sum(n)))
+work_sheet1 %>% filter(member_casual == "casual") %>% group_by(rideable_type) %>% summarise(n = n()) %>%
+  mutate(Percentage = 100 *(n/sum(n)))
+```
+
+### Number of rides through days of the week
+```{r}
+work_sheet1 %>% group_by(day_of_ride) %>% summarise(n = n()) %>%
+  mutate(Percentage = 100 *(n/sum(n)))
+```
+
+
+### Number of rides made by member and casual users by days of the week
+```{r}
+work_sheet1 %>% group_by(day_of_ride) %>% summarise(n = n()) %>%
+  mutate(Percentage = 100 *(n/sum(n)))
+work_sheet1 %>% filter(member_casual == "casual") %>% group_by(day_of_ride) %>% summarise(n = n()) %>%
+  mutate(Percentage = 100 *(n/sum(n)))
+```
+
+```{r}
+options(scipen = 999)
+work_sheet1 %>% group_by(member_casual, day_of_ride) %>% summarise(number_of_rides = n()) %>%
+  arrange(member_casual, day_of_ride) %>% ggplot(aes(x = day_of_ride, y = number_of_rides, fill = member_casual, colour = member_casual)) + 
+  geom_col(position = "dodge")
+```
+
+### Number of rides through the first 7 months of the year
+```{r}
+options(scipen = 999)
+work_sheet1 %>% group_by(ride_month) %>% summarise(n = n()) %>% 
+  mutate(percentage = 100 * (n/sum(n)))
+work_sheet1 %>% filter(member_casual == "member") %>% group_by(ride_month) %>% summarise(n = n()) %>%
+  mutate(Percentage = 100 *(n/sum(n)))
+work_sheet1 %>% filter(member_casual == "casual") %>% group_by(ride_month) %>% summarise(n = n()) %>%
+  mutate(Percentage = 100 *(n/sum(n)))
+work_sheet1 %>% group_by(member_casual, ride_month) %>% summarise(number_of_rides = n()) %>%
+  arrange(member_casual, ride_month) %>% ggplot(aes(x = ride_month, y = number_of_rides, fill = member_casual, colour = member_casual)) + 
+  geom_col(position = "dodge")
+```
+
+### Comparing the ride length of member and casual users by each day
+
+```{r}
+aggregate(work_sheet1$time_duration ~ work_sheet1$member_casual + work_sheet1$day_of_ride, FUN = mean)
+work_sheet1 %>% group_by(member_casual, day_of_ride) %>% summarise(mean = mean(time_duration)) %>% ggplot(aes(x = day_of_ride,y = mean, fill = member_casual)) + geom_col(position = "dodge")
+```
+
+### Comparing the ride length of member and casual users by each month
+
+```{r}
+aggregate(work_sheet1$time_duration ~ work_sheet1$member_casual + work_sheet1$ride_month, FUN = mean)
+work_sheet1 %>% group_by(member_casual, ride_month) %>% summarise(mean = mean(time_duration)) %>% ggplot(aes(x = ride_month,y = mean, fill = member_casual)) + geom_col(position = "dodge")
+```
+
+### Number_of_rides v ride_duration scatter plot
+```{r}
+work_sheet1  %>% group_by(member_casual, time_duration) %>% summarise(number_of_rides = n()) %>%
+  ggplot(aes(x = time_duration, y = number_of_rides, colour = member_casual)) + geom_point()
+```
+
+## Removing the outliers
+
+### Graphical representation of outliers
+```{r}
+outliers_m <- boxplot(d_member$time_duration, plot = FALSE)$out #Finding
+outliers_c <- boxplot(d_casual$time_duration, plot = FALSE)$out #Finding
+```
+
+### Removing The outliers
+```{r}
+eliminated_member <- d_member
+eliminated_member <- eliminated_member[-which(eliminated_member$time_duration %in% outliers_m),] #Removing
+eliminated_casual <- d_casual
+eliminated_casual <- eliminated_casual[-which(eliminated_casual$time_duration %in% outliers_c),] #Removing
+```
+
+### Number_of_trips v time_duration graph
+```{r}
+eliminated <- bind_rows(eliminated_member, eliminated_casual)
+eliminated  %>% group_by(member_casual, time_duration) %>% summarise(number_of_rides = n()) %>%
+  ggplot(aes(x = time_duration, y = number_of_rides, colour = member_casual)) + geom_point()
+```
+
+### Comparing the ride length of member and casual users by each day in the eliminated dataset
+```{r}
+eliminated %>% group_by(member_casual, day_of_ride) %>% summarise(mean = mean(time_duration)) %>% ggplot(aes(x = day_of_ride,y = mean, fill = member_casual)) + geom_col(position = "dodge")
+```
+
+### Comparing the ride length of member and casual users by each month in the eliminated dataset
+```{r}
+eliminated %>% group_by(member_casual, ride_month) %>% summarise(mean = mean(time_duration)) %>% ggplot(aes(x = ride_month,y = mean, fill = member_casual)) + geom_col(position = "dodge")
+```
+
+### Preffered ride times for casual riders and members
+```{r}
+work_sheet1 %>%  mutate(hours_of_ride = format(as.POSIXct(started_at), format = "%H")) %>% 
+  group_by(hours_of_ride, member_casual) %>% 
+  summarise(number_of_rides = n()) %>% 
+  ggplot(aes(x = hours_of_ride, y = number_of_rides, fill = member_casual)) + geom_col(position = "dodge") 
+```
